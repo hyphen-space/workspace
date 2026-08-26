@@ -43,7 +43,7 @@ dependencies {
     implementation("org.xerial:sqlite-jdbc:3.53.2.1")
 
     testImplementation(kotlin("test"))
-    testImplementation("org.junit.jupiter:junit-jupiter:5.13.4")
+    testImplementation("org.junit.jupiter:junit-jupiter:6.1.3")
     testImplementation("io.ktor:ktor-server-test-host:3.5.2")
 }
 
