@@ -1,0 +1,20 @@
+.gradle/
+build/
+.kotlin/
+.idea/
+*.iml
+out/
+
+# Local secrets and generated WireGuard configs
+.env
+.env.*
+!.env.example
+*.key
+*.pem
+*.p12
+*.jks
+*-wg.conf
+data/
+*.db
+*.db-shm
+*.db-wal
