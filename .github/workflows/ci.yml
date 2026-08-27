@@ -24,6 +24,8 @@ jobs:
           sudo dpkg -i "${{ runner.temp }}/hugo.deb"
       - name: Build
         run: hugo --minify --panicOnWarning
+      - name: Test peer validation
+        run: tests/validate-data.sh
       - name: Check generated files
         run: |
           test -f build/site/index.html
