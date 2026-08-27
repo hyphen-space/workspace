@@ -26,6 +26,7 @@ rebuilds and deploys the site.
 Install Hugo 0.164.0 or later, then run:
 
 ```bash
+node scripts/validate-peers.mjs
 hugo
 ```
 

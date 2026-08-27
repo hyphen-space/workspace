@@ -6,33 +6,57 @@ on:
 
 permissions:
   contents: read
-  pages: write
-  id-token: write
 
 jobs:
   build:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     env:
+      ACTIONLINT_VERSION: 1.7.12
       HUGO_VERSION: 0.164.0
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - name: Install linters
+        run: |
+          version="${ACTIONLINT_VERSION}"
+          archive="actionlint_${version}_linux_amd64.tar.gz"
+          wget -O "${{ runner.temp }}/${archive}" \
+            "https://github.com/rhysd/actionlint/releases/download/v${version}/${archive}"
+          wget -O "${{ runner.temp }}/actionlint_checksums.txt" \
+            "https://github.com/rhysd/actionlint/releases/download/v${version}/actionlint_${version}_checksums.txt"
+          grep "  ${archive}$" "${{ runner.temp }}/actionlint_checksums.txt" \
+            > "${{ runner.temp }}/actionlint.sha256"
+          cd "${{ runner.temp }}"
+          sha256sum --check actionlint.sha256
+          tar -xzf "${archive}" actionlint
+          sudo apt-get update
+          sudo apt-get install --yes shellcheck
+      - name: Lint automation
+        run: |
+          "${{ runner.temp }}/actionlint"
+          shellcheck tests/*.sh
       - name: Install Hugo
         run: |
-          wget -O "${{ runner.temp }}/hugo.deb" \
-            "https://github.com/gohugoio/hugo/releases/download/v${HUGO_VERSION}/hugo_${HUGO_VERSION}_linux-amd64.deb"
-          sudo dpkg -i "${{ runner.temp }}/hugo.deb"
+          package="hugo_${HUGO_VERSION}_linux-amd64.deb"
+          wget -O "${{ runner.temp }}/${package}" \
+            "https://github.com/gohugoio/hugo/releases/download/v${HUGO_VERSION}/${package}"
+          wget -O "${{ runner.temp }}/hugo_checksums.txt" \
+            "https://github.com/gohugoio/hugo/releases/download/v${HUGO_VERSION}/hugo_${HUGO_VERSION}_checksums.txt"
+          grep "  ${package}$" "${{ runner.temp }}/hugo_checksums.txt" \
+            > "${{ runner.temp }}/hugo.sha256"
+          cd "${{ runner.temp }}"
+          sha256sum --check hugo.sha256
+          sudo dpkg -i "${package}"
+      - name: Validate peer data
+        run: node scripts/validate-peers.mjs
       - name: Build
         run: hugo --minify --panicOnWarning
       - name: Test peer validation
         run: tests/validate-data.sh
       - name: Check generated files
-        run: |
-          test -f build/site/index.html
-          test -f build/site/peers.json
-          test "$(find site-data/peers -name '*.json' | wc -l)" -eq "$(find build/site/configs -name '*-wg.conf' | wc -l)"
+        run: node tests/validate-output.mjs
       - if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-        uses: actions/upload-pages-artifact@v5
+        uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5
         with:
           path: build/site
 
@@ -43,9 +67,12 @@ jobs:
     permissions:
       pages: write
       id-token: write
+    concurrency:
+      group: pages
+      cancel-in-progress: false
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - id: deployment
-        uses: actions/deploy-pages@v5
+        uses: actions/deploy-pages@cd2ce8fcbc39b97be8ca5fce6e763baed58fa128 # v5
