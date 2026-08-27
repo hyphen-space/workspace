@@ -29,7 +29,7 @@
         <tr>
           <td>{{ $peer.name }}</td>
           <td>{{ $peer.address }}</td>
-          <td>{{ $peer.endpoint }}</td>
+          <td>{{ with $peer.endpoint }}{{ . }}{{ else }}—{{ end }}</td>
           <td><code>{{ $peer.publicKey }}</code></td>
           <td><a class="download" href="{{ $config.RelPermalink }}" download>Download</a></td>
         </tr>

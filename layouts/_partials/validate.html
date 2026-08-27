@@ -26,12 +26,14 @@
 {{- if or (not (findRE `^[A-Za-z0-9+/]{43}=$` $peer.publicKey)) (eq $peer.publicKey `AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=`) -}}
   {{- errorf "Peer %q has an invalid WireGuard public key" $peer.name -}}
 {{- end -}}
-{{- if not (findRE `^(\[[0-9A-Fa-f:]+\]|[^:]+):([1-9][0-9]{0,4})$` $peer.endpoint) -}}
-  {{- errorf "Peer %q has an invalid endpoint" $peer.name -}}
-{{- end -}}
-{{- $port := int (index (findRE `[0-9]+$` $peer.endpoint) 0) -}}
-{{- if gt $port 65535 -}}
-  {{- errorf "Peer %q has an invalid endpoint port" $peer.name -}}
+{{- if isset $peer "endpoint" -}}
+  {{- if not (findRE `^(\[[0-9A-Fa-f:]+\]|[^:]+):([1-9][0-9]{0,4})$` $peer.endpoint) -}}
+    {{- errorf "Peer %q has an invalid endpoint" $peer.name -}}
+  {{- end -}}
+  {{- $port := int (index (findRE `[0-9]+$` $peer.endpoint) 0) -}}
+  {{- if gt $port 65535 -}}
+    {{- errorf "Peer %q has an invalid endpoint port" $peer.name -}}
+  {{- end -}}
 {{- end -}}
 {{- if .seenAddresses.Get $peer.address -}}
   {{- errorf "Peer address %q is not unique" $peer.address -}}

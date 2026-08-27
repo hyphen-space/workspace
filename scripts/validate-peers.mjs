@@ -4,7 +4,8 @@ import { readFile, readdir } from "node:fs/promises";
 import { isIP } from "node:net";
 import { basename, resolve } from "node:path";
 
-const fields = ["address", "endpoint", "name", "publicKey"];
+const requiredFields = ["address", "name", "publicKey"];
+const allowedFields = [...requiredFields, "endpoint"].sort();
 const namePattern = /^[A-Za-z0-9][A-Za-z0-9._-]{0,62}$/;
 const keyPattern = /^[A-Za-z0-9+/]{43}=$/;
 const labelPattern = /^[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?$/;
@@ -93,12 +94,13 @@ function validatePeer(file, peer) {
 
   const actualFields = Object.keys(peer).sort();
 
-  if (JSON.stringify(actualFields) !== JSON.stringify(fields)) {
-    fail(`${file} must contain only name, address, publicKey, and endpoint strings`);
+  if (actualFields.some((field) => !allowedFields.includes(field)) ||
+      requiredFields.some((field) => !actualFields.includes(field))) {
+    fail(`${file} must contain name, address, publicKey, and an optional endpoint`);
   }
 
-  if (fields.some((field) => typeof peer[field] !== "string")) {
-    fail(`${file} must contain only name, address, publicKey, and endpoint strings`);
+  if (actualFields.some((field) => typeof peer[field] !== "string")) {
+    fail(`${file} fields must be strings`);
   }
 
   const fileName = basename(file, ".json");
@@ -113,7 +115,9 @@ function validatePeer(file, peer) {
 
   validateAddress(peer);
   validateKey(peer);
-  validateEndpoint(peer);
+  if (peer.endpoint !== undefined) {
+    validateEndpoint(peer);
+  }
 }
 
 async function loadPeers(directory) {

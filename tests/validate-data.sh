@@ -14,6 +14,32 @@ peer() {
     "$1" "$2" "$3" "$4"
 }
 
+peer_without_endpoint() {
+  printf '{"name":"%s","address":"%s","publicKey":"%s"}\n' \
+    "$1" "$2" "$3"
+}
+
+test_optional_endpoint() {
+  data="$work/no-endpoint/data/peers"
+  output="$work/no-endpoint/site"
+  mkdir -p "$data"
+  peer alice 192.0.2.1/32 "$key_alice" alice.example:51820 \
+    > "$data/alice.json"
+  peer_without_endpoint bob 192.0.2.2/32 "$key_bob" \
+    > "$data/bob.json"
+
+  node "$root/scripts/validate-peers.mjs" "$data"
+  HUGO_DATADIR="$work/no-endpoint/data" hugo --source "$root" \
+    --destination "$output" --panicOnWarning >/dev/null
+
+  if grep -q '^Endpoint = ' "$output/configs/alice-wg.conf"; then
+    echo 'Generated a missing endpoint' >&2
+    return 1
+  fi
+
+  grep -Fq 'Endpoint = alice.example:51820' "$output/configs/bob-wg.conf"
+}
+
 invalid() {
   name=$1
   expected=$2
@@ -42,6 +68,7 @@ invalid() {
 }
 
 node "$root/scripts/validate-peers.mjs" "$root/site-data/peers"
+test_optional_endpoint
 
 invalid file-name 'must match data file name' \
   wrong "$(peer alice 192.0.2.1/32 "$key_alice" alice.example:51820)"
@@ -64,7 +91,7 @@ invalid duplicate-key 'is not unique' \
   alice "$(peer alice 192.0.2.1/32 "$key_alice" alice.example:51820)" \
   bob "$(peer bob 192.0.2.2/32 "$key_alice" bob.example:51820)"
 
-invalid missing-field 'must contain only' \
+invalid missing-field 'must contain name, address, publicKey' \
   alice '{"name":"alice","address":"192.0.2.1/32"}'
 invalid malformed-json 'is not valid JSON' \
   alice '{'

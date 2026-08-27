@@ -21,6 +21,9 @@ The file name must match `name`. Open a pull request. The Hugo build rejects
 invalid identities and duplicate addresses or public keys. A merge to `main`
 rebuilds and deploys the site.
 
+`endpoint` is optional. Omit it for peers that only initiate connections or do
+not want to publish a hostname.
+
 ## Generate locally
 
 Install Hugo 0.164.0 or later, then run:

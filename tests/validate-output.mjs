@@ -53,11 +53,16 @@ for (const owner of sourcePeers) {
   }
 
   for (const peer of sourcePeers.filter((candidate) => candidate.name !== owner.name)) {
-    for (const line of [
+    const lines = [
       `PublicKey = ${peer.publicKey}`,
       `AllowedIPs = ${peer.address}`,
-      `Endpoint = ${peer.endpoint}`,
-    ]) {
+    ];
+
+    if (peer.endpoint !== undefined) {
+      lines.push(`Endpoint = ${peer.endpoint}`);
+    }
+
+    for (const line of lines) {
       if (!config.includes(line)) {
         throw new Error(`${owner.name}'s configuration is missing ${peer.name}'s data`);
       }
