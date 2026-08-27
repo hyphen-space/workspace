@@ -1,6 +1,5 @@
-.gradle/
 build/
-.kotlin/
+.hugo_build.lock
 .idea/
 *.iml
 out/

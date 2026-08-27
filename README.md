@@ -1,129 +1,50 @@
 # WireGuard peer directory
 
-A small public directory for WireGuard peer addresses and public keys. Clients
-can poll the REST API. Each peer gets a private bearer token for updates and
-deletion.
+A static directory for public WireGuard peer addresses and keys. Git stores the
+peer definitions. Hugo generates the page and downloadable WireGuard
+configurations. GitHub Actions deploys the result to GitHub Pages.
 
-The HTTP server uses Ktor with CIO, Kotlin serialization, bearer
-authentication, and token-bucket rate limits.
+## Add or update a peer
 
-Peer records and owner-token hashes are stored in SQLite.
+Add `site-data/peers/<name>.json`, or edit an existing file:
 
-## Run
-
-Requires JDK 25. No root access or external service is needed.
-
-```bash
-export REGISTRATION_TOKEN="$(openssl rand -hex 32)"
-./gradlew run
+```json
+{
+  "name": "alice",
+  "address": "10.8.0.2/32",
+  "publicKey": "TrMvSoP4jYQlY6RIzBgbssQqY3vxI2Pi+y71lOWWXX0=",
+  "endpoint": "alice.example.com:51820"
+}
 ```
 
-Open <http://localhost:8080>. Set `PORT` to use another port.
+The file name must match `name`. Open a pull request. The Hugo build rejects
+invalid identities and duplicate addresses or public keys. A merge to `main`
+rebuilds and deploys the site.
 
-The default database is `data/wgkeys.db`. Set `DATABASE_PATH` to use another
-file.
+## Generate locally
 
-`REGISTRATION_TOKEN` must contain at least 32 characters. Share it only with
-people or systems that can create peers.
-
-## Container
-
-Build and run the distribution image with Podman:
+Install Hugo 0.164.0 or later, then run:
 
 ```bash
-podman build -t wgkeys .
-export REGISTRATION_TOKEN="$(openssl rand -hex 32)"
-podman run --rm --name wgkeys \
-  -p 8080:8080 \
-  -e REGISTRATION_TOKEN \
-  -v wgkeys-data:/data:Z \
-  wgkeys
+hugo
 ```
 
-The image uses JDK 25 and runs as the unprivileged `wgkeys` user. The named
-volume keeps the SQLite database after the container stops.
-
-## API
-
-Register a peer. Save the returned token: the server shows it only once.
+The site is written to `build/site`. For local development:
 
 ```bash
-curl -sS http://localhost:8080/api/peers \
-  -H 'Content-Type: application/json' \
-  -H "Authorization: Bearer $REGISTRATION_TOKEN" \
-  -d '{
-    "name": "alice",
-    "address": "10.8.0.2/32",
-    "publicKey": "TrMvSoP4jYQlY6RIzBgbssQqY3vxI2Pi+y71lOWWXX0=",
-    "endpoint": "alice.example.com:51820"
-  }'
+hugo server
 ```
 
-List peers or get one peer:
+Each peer gets `build/site/configs/<name>-wg.conf`. The web page links to these
+files. Users must replace `REPLACE_WITH_PRIVATE_KEY` after download.
 
-```bash
-curl -sS http://localhost:8080/api/peers
-curl -sS http://localhost:8080/api/peers/alice
-```
+## Deploy
 
-Download a `wg-quick` configuration template for one peer:
-
-```bash
-curl -fOJ http://localhost:8080/api/peers/alice/wg.conf
-```
-
-Replace `REPLACE_WITH_PRIVATE_KEY` in the file with Alice's private key. The
-server does not receive or store private keys. The web page also has a Download
-button for each peer.
-
-Update a peer:
-
-```bash
-curl -sS -X PUT http://localhost:8080/api/peers/alice \
-  -H 'Content-Type: application/json' \
-  -H "Authorization: Bearer $PEER_TOKEN" \
-  -d '{
-    "address": "10.8.0.2/32",
-    "publicKey": "TrMvSoP4jYQlY6RIzBgbssQqY3vxI2Pi+y71lOWWXX0=",
-    "endpoint": "alice.example.com:51820"
-  }'
-```
-
-Delete a peer:
-
-```bash
-curl -sS -X DELETE http://localhost:8080/api/peers/alice \
-  -H "Authorization: Bearer $PEER_TOKEN"
-```
-
-Names are 1–63 safe URL characters. Addresses must use IPv4 or IPv6 CIDR
-notation. Public keys must use canonical WireGuard Base64 encoding, decode to
-32 non-zero bytes, and end with `=`. Endpoints must use `host:port` or
-`[IPv6]:port` notation. Peer names, addresses, and public keys must be unique.
-Conflicting registration or update requests return `409 Conflict`.
-
-An existing database that contains duplicate addresses or public keys cannot
-start after this upgrade. Resolve those duplicates before you restart it.
-
-The list response includes `ETag` and `Cache-Control` headers. Polling clients
-can send `If-None-Match`; an unchanged directory returns `304 Not Modified`.
-
-Each client address can make 120 requests per minute and 10 registration
-requests per hour. A limited request returns `429 Too Many Requests` and a
-`Retry-After` header. Run a distributed limiter at the reverse proxy when you
-use more than one application instance.
-
-## Check
-
-```bash
-./gradlew test
-./gradlew check
-```
-
-`check` also runs KtLint, Detekt, and JaCoCo.
+In the repository settings, set the GitHub Pages source to **GitHub Actions**.
+The workflow validates every change and deploys after a push to `main`.
 
 ## Security
 
-Public keys and tunnel addresses are public by design. Never upload a WireGuard
-private key. Use HTTPS outside a trusted local network. See [SECURITY.md](SECURITY.md)
-for reporting and deployment guidance.
+Peer definitions, tunnel addresses, generated configurations, and public keys
+are public. Never commit a WireGuard private key. Protect `main` with required
+reviews and require MFA for repository writers. See [SECURITY.md](SECURITY.md).

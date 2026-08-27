@@ -1,0 +1,43 @@
+{{- $fileName := .fileName -}}
+{{- $peer := .peer -}}
+{{- if ne $fileName $peer.name -}}
+  {{- errorf "Peer name %q must match data file name %q" $peer.name $fileName -}}
+{{- end -}}
+{{- if not (findRE `^[A-Za-z0-9][A-Za-z0-9._-]{0,62}$` $peer.name) -}}
+  {{- errorf "Peer %q has an invalid name" $peer.name -}}
+{{- end -}}
+{{- $validAddress := false -}}
+{{- $cidr := strings.Split $peer.address "/" -}}
+{{- if eq (len $cidr) 2 -}}
+  {{- $address := index $cidr 0 -}}
+  {{- $prefix := int (index $cidr 1) -}}
+  {{- if and (findRE `^([0-9]{1,3}\.){3}[0-9]{1,3}$` $address) (ge $prefix 0) (le $prefix 32) -}}
+    {{- $validAddress = true -}}
+    {{- range strings.Split $address "." -}}
+      {{- if gt (int .) 255 -}}{{- $validAddress = false -}}{{- end -}}
+    {{- end -}}
+  {{- else if and (findRE `^[0-9A-Fa-f:]+$` $address) (strings.Contains $address ":") (ge $prefix 0) (le $prefix 128) -}}
+    {{- $validAddress = true -}}
+  {{- end -}}
+{{- end -}}
+{{- if not $validAddress -}}
+  {{- errorf "Peer %q has an invalid CIDR address" $peer.name -}}
+{{- end -}}
+{{- if or (not (findRE `^[A-Za-z0-9+/]{43}=$` $peer.publicKey)) (eq $peer.publicKey `AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=`) -}}
+  {{- errorf "Peer %q has an invalid WireGuard public key" $peer.name -}}
+{{- end -}}
+{{- if not (findRE `^(\[[0-9A-Fa-f:]+\]|[^:]+):([1-9][0-9]{0,4})$` $peer.endpoint) -}}
+  {{- errorf "Peer %q has an invalid endpoint" $peer.name -}}
+{{- end -}}
+{{- $port := int (index (findRE `[0-9]+$` $peer.endpoint) 0) -}}
+{{- if gt $port 65535 -}}
+  {{- errorf "Peer %q has an invalid endpoint port" $peer.name -}}
+{{- end -}}
+{{- if .seenAddresses.Get $peer.address -}}
+  {{- errorf "Peer address %q is not unique" $peer.address -}}
+{{- end -}}
+{{- if .seenKeys.Get $peer.publicKey -}}
+  {{- errorf "Peer public key for %q is not unique" $peer.name -}}
+{{- end -}}
+{{- .seenAddresses.Set $peer.address true -}}
+{{- .seenKeys.Set $peer.publicKey true -}}

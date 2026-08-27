@@ -1,0 +1,12 @@
+baseURL = "https://example.org/"
+locale = "en-US"
+title = "WireGuard peers"
+publishDir = "build/site"
+dataDir = "site-data"
+cleanDestinationDir = true
+relativeURLs = true
+disableKinds = ["404", "rss", "sitemap", "taxonomy", "term"]
+
+[caches]
+  [caches.assets]
+    dir = ":cacheDir/assets"

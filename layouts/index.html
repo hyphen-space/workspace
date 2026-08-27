@@ -1,0 +1,40 @@
+{{- $peers := slice -}}
+{{- $seenAddresses := collections.NewScratch -}}
+{{- $seenKeys := collections.NewScratch -}}
+{{- range $fileName, $peer := hugo.Data.peers -}}
+  {{- partial "validate.html" (dict "fileName" $fileName "peer" $peer "seenAddresses" $seenAddresses "seenKeys" $seenKeys) -}}
+  {{- $peers = $peers | append $peer -}}
+{{- end -}}
+{{- $peers = sort $peers "name" -}}
+{{- (resources.FromString "peers.json" ($peers | jsonify (dict "indent" "  "))).Publish -}}
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ site.Title }}</title>
+  <link rel="stylesheet" href="{{ "index.css" | relURL }}">
+</head>
+<body>
+  <header>
+    <div><h1>Peers</h1><p>Public WireGuard key directory</p></div>
+  </header>
+  <p>{{ len $peers }} peer{{ if ne (len $peers) 1 }}s{{ end }}</p>
+  <table>
+    <thead><tr><th>Name</th><th>Address</th><th>Endpoint</th><th>Public key</th><th>Config</th></tr></thead>
+    <tbody>
+      {{- range $peer := $peers }}
+        {{- $content := partial "peer.conf" (dict "owner" $peer "peers" $peers) -}}
+        {{- $config := resources.FromString (printf "configs/%s-wg.conf" $peer.name) $content -}}
+        <tr>
+          <td>{{ $peer.name }}</td>
+          <td>{{ $peer.address }}</td>
+          <td>{{ $peer.endpoint }}</td>
+          <td><code>{{ $peer.publicKey }}</code></td>
+          <td><a class="download" href="{{ $config.RelPermalink }}" download>Download</a></td>
+        </tr>
+      {{- end }}
+    </tbody>
+  </table>
+</body>
+</html>

@@ -1,0 +1,6 @@
+{
+  "name": "carol",
+  "address": "192.0.2.3/32",
+  "publicKey": "9hv5ed0kQZFjb1eajaQ6b/nOMtd0J63fyYwwhldCkvA=",
+  "endpoint": "carol.example:51820"
+}

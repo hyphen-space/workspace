@@ -1,17 +1,14 @@
 # syntax=docker/dockerfile:1
 
 ARG NODE_VERSION=24-bookworm-slim
-ARG GRADLE_VERSION=jdk25-noble
+ARG HUGO_VERSION=0.164.0
 
-FROM docker.io/library/node:${NODE_VERSION} AS node
+FROM docker.io/library/node:${NODE_VERSION}
 
-FROM docker.io/library/gradle:${GRADLE_VERSION}
+ARG HUGO_VERSION
+ARG TARGETARCH
 
 USER root
-
-# Copy Node.js from its official image so the Codex CLI can run without adding
-# a third-party package repository to the development image.
-COPY --from=node /usr/local/ /usr/local/
 
 RUN apt-get update \
     && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
@@ -27,20 +24,22 @@ RUN apt-get update \
         ripgrep \
         unzip \
         zip \
+    && curl -fL -o /tmp/hugo.tar.gz \
+        "https://github.com/gohugoio/hugo/releases/download/v${HUGO_VERSION}/hugo_${HUGO_VERSION}_linux-${TARGETARCH}.tar.gz" \
+    && tar -xzf /tmp/hugo.tar.gz -C /usr/local/bin hugo \
     && npm install --global @openai/codex \
     && npm cache clean --force \
+    && rm /tmp/hugo.tar.gz \
     && rm -rf /var/lib/apt/lists/*
 
-ENV CODEX_HOME=/home/gradle/.codex \
-    GRADLE_USER_HOME=/home/gradle/.gradle \
-    JAVA_HOME=/opt/java/openjdk
+ENV CODEX_HOME=/home/node/.codex
 
-RUN mkdir -p /workspace "${CODEX_HOME}" "${GRADLE_USER_HOME}" \
-    && chown -R gradle:gradle /workspace /home/gradle
+RUN mkdir -p /workspace "${CODEX_HOME}" \
+    && chown -R node:node /workspace /home/node
 
 WORKDIR /workspace
 
-USER gradle
+USER node
 
 EXPOSE 8080
 

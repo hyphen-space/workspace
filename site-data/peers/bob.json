@@ -1,0 +1,6 @@
+{
+  "name": "bob",
+  "address": "192.0.2.2/32",
+  "publicKey": "ujUKr5qa5vtpRqwN8mWXHgVAMjI02EPcU7TPVxxz3SA=",
+  "endpoint": "bob.example:51820"
+}
